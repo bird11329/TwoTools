@@ -1,0 +1,232 @@
+Usage: ./SelectionTool [option]
+ or:   ./SelectionTool [option] [conditions]
+Display files that meet the conditions provided if any.
+
+Mandatory arguments to long options are mandatory for short options too.
+
+Arguments are classified into three groups according to their function. The
+first group of arguments take care of connection:
+  -S, --server=SERVER           Server of database.
+  -U, --user=USER               User account
+  -W, --passwd=PASSWD           Password for that user to login
+  -D, --database=DATABASE       Name of Database
+  -P, --port=PORT               Port of connection. 3306 as default
+  -T, --type=TYPE               Type of records concerned
+  -o, --options=OPTION_FILE_NAME
+                                Name of configuration file for the query
+Note if -S, -U, -W, -D, -P, -T overwrites the corresponding item(s) in the
+configuration file. See Notes below for more details.
+
+Options in the second group control the behavior of SelectionTool. If one of
+the first two options is given, SelectionTool displays its help messege and
+exit, and the others affect the way it selects record(s):
+  -h, --help                    Print help message and exit
+  -m, --manual                  Print detailed help message and exit
+  -O, --output=OUTNAME          Save the output into a file OUTNAME
+  -R, --redirect=OUTNAME        Only save the output into this file OUTNAME
+  --print-level=PRINT_LEVEL     Items to print (the lower the more)
+
+The third group shapes SelectionTool by specifying condition(s) to select
+record(s). Each option must take a parameter. Two different ways to specify the
+parameter: options ended with "(R)" take a range (with four formats), while the
+others have their own formats. Details in Notes.
+  -C, --comment-state=STATE_NUMBER
+                                0: (Default) no comment
+                                1: with comment
+                                2: not-limited
+                                (Other values forces SelectionTool to quit)
+  --comment-required            Only print records with comments
+                                (same as --comment-state=1)
+  --comment-uncontrolled        Print records with and without comments
+                                (same as --comment-state=2)
+  -N, --not-good                Enable the use of non-good records
+  -f, --filename=FILENAME       Name (hints) of root file ("*" accepted)
+  -n, --Entries=ENTRIES         Number of event per ROOT file (R)
+  -s, --Size=SIZE               Size range of a ROOT file (MB) (R)
+  -r, --SvnRev=SVNREV           Revision of DMPSW by which ROOT files are
+                                generated (R)
+  -e, --energy=ENERGY           Energy range (MeV) (R)
+  -l, --last-modified=LAST-MODIFIED
+                                Date-time of last modified (R)
+  -t, --timestamp=TIMESTAMP     Timestamp of last modified range (R)
+  -v, --version=VERSION         Version of DMPSW (R)
+
+Notes:
+ 1) Configuration files are used to shadow the account, etc. in the terminal
+    commands. As for now, 6 options can be extracted, and they are
+       server   user   passwd   database   type   port
+    All others are ignored.
+
+ 2) "default.ini" is the default configuration file provided along with the code.
+    It looks like (No blank lines in the file, just for a clear view here; "^"
+    and "$" are used to show the beginning and ending of a line):
+
+^server=0.0.0.0$
+^user=sample_user$
+^passwd=password$
+^database=test$
+^type=data_2a_tbl$
+^port=3306$
+
+    This file contains all parameters to use the database as a sample user, and
+    selects records from "data_2a_tbl" (2A files) as default. In this section,
+    it is used as default, and it is not a good idea to expose one's password
+    directly onto terminal arguments.
+    If one wants his/her own configuration file, here are the rules:
+      * each line follow the format
+<option>=<value>
+        where <option> should be one of the size in 1) (case insensitive).
+      * No whitespace is allowed on any line in the file, unless they are part
+        of <option> or <value>. For example:
+        +-----------------------+----------+-----------------+------+
+        |    text on a line     | <option> |    <value>      | good |
+        +-----------------------+----------+-----------------+------+
+        | ^user=sample_user$    |  ^user$  |  ^sample_user$  | YES  |
+        | ^ user=sample_user$   | ^ user$  |  ^sample_user$  |  NO  |
+        | ^ user = sample_user$ | ^ user $ | ^ sample_user$  |  NO  |
+        | ^user=sample_user $   |  ^user$  | ^sample_user $  |  NO  |
+        | ^ user = sample_user  | ^ user $ | ^ sample_user $ |  NO  |
+        +-----------------------+----------+-----------------+------+
+        ("^" indicates the start of a line, "$" the end)
+      * No []-structures are supported (multiple levels are not supported)
+      * It's safe to omit some items in the configuration file, but necessary
+        items (see next) must all be provided.
+      * Necessary items for good connection requires are
+          server             the server of database
+          user               account to login the server
+          password           password for <user> to login
+          database           name of database to query
+          port               port of mysql connection
+          type               type of file, i.e. table name
+
+ 3) In order for SelectionTool to locate the configuration file, it is
+    recommended that one put it into the running folder if OPTION_FILE_NAME
+    contains only the name. Otherwise, one can give the path to it either from
+    the current folder (relative path) or from root directory (absolute path).
+    Paths to locate configuration file are (decreasing priority):
+      OPTION_FILE_NAME
+      <Running folder>
+      <Home of runner (from environment variable "HOME")>
+      <Installation folder>
+      <Folder where one runs configure.sh>
+    Running configure.sh fixes these paths into the code, so if one changes the
+    paths, re-configure.sh, and re-install.
+    If SelectionTool fails to locate the configuration file or if the file is
+    unreadable, it terminates itself.
+
+ 4) Options "-O, --output=OUTNAME" and "-R, --redirect=OUTNAME" create a file
+    to store the record(s) selected with the same format as if they are not
+    provided. If the file can't be created, SelectionTool fails. The
+    difference between them is that "-R" suppresses all output on the screen
+    and all record(s) are stored into the file only, while the other stores the
+    record(s) into the file, and displays them on the screen.
+
+ 5) Print-level is created to hide unnecessary properties from unconcerned
+    users. Each property of a record has its print-level, and there are only
+    four different levels as for now, where
+     +---------------+-------+---------------+-------+
+     | Property      | Level | Property      | Level |
+     +---------------+-------+---------------+-------+
+     | last_modified |   3   | lfn           |   3   |
+     | version       |   3   | task          |   3   |
+     | emin          |   2   | SvnRev        |   2   |
+     | tstart        |   2   |
+     | emax          |   2   | tstop         |   2   |
+     | nevts         |   2   |
+     | size          |   2   | type          |   2   |
+     | comment       |   1   | error_code    |   1   |
+     | good          |   1   |
+     | checksum      |   0   | remote        |   0   |
+     +---------------+-------+---------------+-------+
+    Option "print-level" gives a minimal level to display, so if
+    --print-level=2 is given, only properties with level 3 will be printed.
+    Default level is -1, so all properties are displayed. For illogical levels:
+      level > 2   =>  SelectionTool quits because no property survives
+      level < -1  =>  a warning will be given and use instead -1 (default)
+      float level =>  SelectionTool crashes...
+
+ 6) "(R)" is short for "range", indicating that this is an option which takes
+    a range as its parameter. There are four formats supported:
+
+       LowEdge-HighEdge       LowEdge < records < HighEdge
+       LowEdge-                records > LowEdge
+       -HighEdge               records < HighEdge
+       SingleValue              records == SingleValue
+
+    Note there must not be any whitespace in the range, or SelectionTool will
+    fall because characters after whitespaces will be taken as another option.
+    Also, SelectionTool uses a hyphen "-" to separate the low edge and high
+    one, NOT an underline "_" or others. On the other hand, multiple hyphens
+    are supported (decreasing priority):
+    +--------------------+-----------------------------+
+    | parameter          |     Ways to handle          |
+    +--------------------+-----------------------------+
+    | starts with "-"    |   "-HighEdge" mode         |
+    | ends with "-"      |   "LowEdge-" mode          |
+    | odd number of "-"  | The middle "-" as separator |
+    +--------------------+-----------------------------+
+    If the number of "-" is even, SelectionTool refuses to take it.
+
+ 7) Option "-f, --filename=<FileHints>" can ingest multiple parameters, it can
+    also ingest "*"s for matching.
+    Option "-l, --last-modified=<LAST-MODIFIED>" takes a range for date-time.
+    Its edge must follow the format of YYYYmmdd[_HH[MM[SS]]], where
+    +---------+----------------+--------+----------------+
+    | Format  |   Meaning      | Format |    Meaning     |
+    +---------+----------------+--------+----------------+
+    |  YYYY   |     year       |   HH   |  hour (00-23)  |
+    |   mm    | month (01..12) |   MM   | minute (00-59) |
+    |   dd    |  day (01..31)  |   SS   | second (00-60) |
+    +---------+----------------+--------+----------------+
+    And if HH is omitted, it is taken as "00", so does MM and SS.
+    Also, it is not necessary for both edges to follow the same format, and
+    one can also use "-" rather than "_" to separate YYYYmmdd and HHMMSS.
+    See examples below.
+
+
+Examples:
+  In the examples below, "default.ini" is just the file displayed above.
+
+  ./SelectionTool -h
+         Print help and exit
+
+  ./SelectionTool -o default.ini
+         Print all records according to the default configuration file
+         (server, database, table; login as sample_user with that password).
+
+  ./SelectionTool -o default.ini -T mc_simu_tbl
+         Print all records according to the configuration (server, database)
+         in the default configuration file, but from mc_simu_tbl rather than
+         data_2a_tbl in that file.
+
+  ./SelectionTool -o default.ini -U another_user -P passwd
+         Print all records according to the configuration (server, database,
+         table), and login as "another_user" with password "passwd" (EXPOSED
+         DIRECTLY). It is highly dangerous, so one can try instead to specify
+         the user in the terminal and to put the passwd into one's own
+         configuration file:
+         ./SelectionTool -o my_config.ini -U myself
+
+  ./SelectionTool -o default.ini -l 20170624_233333
+         Print record(s) that was modified on 2017-06-24 23:33:33
+
+  ./SelectionTool -o default.ini -l 20170624_230000-20170626
+         Print record(s) that was modified between 2017-06-24 23:00:00 and
+         2017-06-26 00:00:00
+
+  ./SelectionTool -o default.ini -f *aaaaaa* *bbbbb* -v 5.4.1-5.4.2 --print-level=2 -C1
+         Print LFN, last-modified, task, version of record(s) whose (joined by
+         logical and, not logical or)
+              1. LFN follows the pattern *aaaaaa*, or *bbbbb*
+              2. Version between 5.4.1 and 5.4.2
+              3. With comments (not NULL, nor NONE)
+
+  ./SelectionTool -o default.ini -v 5.4.2 -R log.only
+         Store records whose version is 5.4.2 exactly (nothing on screen)
+
+Exit status:
+ 0  if OK,
+ 1  if minor problems (e.g., cannot access subdirectory),
+ 2  if serious trouble (e.g., cannot access command-line argument).
+
+Report SelectionTool bugs to wangyp@pmo.ac.cn

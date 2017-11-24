@@ -1,0 +1,323 @@
+Usage: ./OperationTool [option]
+Database handler for inserting/updating/deleting (Superuser only):
+
+Mandatory arguments to long options are mandatory for short options too.
+
+Arguments are classified into three groups according to their function. The
+first group of arguments take care of connection, just as SelectionTool does:
+  -S, --server=SERVER           Server of database.
+  -U, --user=USER               User account
+  -W, --passwd=PASSWD           Password for that user to login
+  -D, --database=DATABASE       Name of Database
+  -P, --port=PORT               Port of connection. 3306 as default
+  -T, --type=TYPE               Type of records concerned
+  -o, --options=OPTION_FILE_NAME
+                                Name of configuration file for the query
+Note if -S, -U, -W, -D, -P, -T overwrites the corresponding item(s) in the
+configuration file. See Notes below and help message of SelectionTool for more
+details.
+As for "record", see Notes for its definition.
+
+The second group of options control the behavior of OperationTool. Either they
+tell OperationTool to exit directly, or the mode of OperationTool is changed.
+  -h, --help                    Print help message and exit
+  -m, --manual                  Print detailed help message and exit
+  -M, --mode=MODE               1: (default) Insert.
+                                2: Update
+                                3: Delete
+                                (Other values forces SelectionTool to quit)
+  --delete-mode                 Switch to delete mode
+  --update-mode                 Switch to update mode
+  --multi-tables                Allowing different types of ROOT files
+
+Options on the third group can also be divided into three sub-groups,
+indicating three different ways of arguments passing. They are:
+  1) Use a file with JSON string. Only way for multi ROOT files. In this way,
+     an option is concerned:
+  -j, --json-file=JSON-FILE     Name of JSON file to be parsed
+  2) Direct input all (necessary) aspects of a ROOT file. Also, one option is
+    for this way (see Notes for definition of "aspect"):
+  -d, --direct-input            Enable user(s) to input the JSON string from
+                                 terminal
+  3) Use options specifying all (necessary) aspects of a ROOT file. Because a
+    ROOT file has many aspects that must be given for it to be recorded, this
+    way is connected to many options, each for one necessary aspect:
+  -f, --lfn=LFN                 Logical file name
+  -e, --tstop=TSTOP             Timestamp of last event
+  -b, --tstart=TSTART           Timestamp of first event
+  -s, --size=SIZE               Size of this file (unit: B)
+  -n, --nevts=NEVTS             Number of events
+  -v, --SvnRev=SVNREV           Revision version of DAMPE (i.e., 6047)
+  -V, --version=VERSION         Version DAMPE (i.e., 5.4.2)
+  -c, --comment=COMMENT         Comment of this file
+  -H, --emax=EMAX               Highest energy in the file
+  -L, --emin=EMIN               Lowest energy in the file
+  -l, --last_modified=LAST_MODIFIED
+                                Time of last modified ("YYYYmmdd-HHMMSS")
+  -C, --checksum=CHECKSUM       Expected CheckSum of ROOT file (2A only)
+
+Three ways to inform OperationTool of a record:
+  1) Use a file (recommended)
+    JSON strings are the source for OperationTool to handle: insert, update, or
+    delete, depending on terminal settings. For a JSON file, it is suggested
+    to provide all aspects of a record, because it can help ease the workload
+    of OperationTool.
+    In the JSON file, one line for a record. A sample line looks like:
+
+{"comment": "NONE", "good": true, "emax": -1.0, "lfn": "root://DATA/datageneva/FMdata/Orbit_Data/2A/releases/5.4.2/DAMPE_2A_OBS_20170623_20170623T194504_20170623T202018_00000_gfJZtTjswKOdBR94G75G/20111111110000_20111111110000.root", "last_modified": "2017-06-01_00:00:00", "tstop": "1412508.89", "size": "2095022548", "task": "None", "type": "2A", "emin": -1.0, "checksum": "bef17af44cb42c0d49f653e73dTTTTTT", "SvnRev": "6047", "version": "5.4.2", "tstart": 141248704.9, "nevts": 115340, "error_code": 0}
+
+    Format:
+      (a) A line for a record, and if a record is splitted into multiple lines,
+          they are treated separately and are thus rejected due to the lack of
+          necessary aspects.
+      (b) it starts with "{" and stops with "}" without a leading quotation
+          mark (" or ').
+      (c) No whitespace before "{" or after "}", although some whitespaces
+          there do no harm.
+      (d) Order of aspects doesn't matter. What does matter is that no aspects
+         is omitted (with the only exception of "remote").
+      (e) It is suggested to use double quotation mark (") rather than the
+          single version ('), but single mark can also be taken.
+      (f) If a line has no more than 3 chars (0, 1, 2 chars), it is ignored
+          (special chars like "\n" don't count in).  Any line with more than 2
+          chars will be parsed as JSON string, and it will be abandoned with
+          wrong format.
+      (g) Multiple records are supported into one file on condition that one
+          line, one record. This is also the only way to input many records on
+          one call.
+
+  2) Options
+    In case of a single record that using a JSON file doesn't pay, use options
+    instead to create a record. All necessary aspects must be specified in this
+    way (see Notes for "necessary aspects") if OperationTool works in INSERTION
+    mode, while for other modes it may required less. And if any of the options
+    for aspects are given, no JSON files nor direct input is allowed, otherwise
+    OperationTool will exit abnormally.
+    Some options deserve special notice:
+    +---------------+------------------------------------------+
+    |    Option     |              Suggestions                 |
+    +---------------+------------------------------------------+
+    | last_modified | Format: YYYYmmdd-HHMMSS (from "date")    |
+    |    comment    | Usually should be quoted for whitespaces |
+    |     size      | In the unit of B for presicion           |
+    |   emax, emin  | Unit: MeV                                |
+    +---------------+------------------------------------------+
+
+  3) Direct input
+    OperationTool can also take in aspects from std::cin, direct input. Told
+    "--direct-input", OperationTool tries to read aspects from standard input,
+    and tries to gather all aspects until an empty line arrives.
+    Format:
+      (a) Unit of reading is a line (marked as an ending "\n"), rather than
+          single words separated by whitespace.
+      (b) Only when a line with 0 char or 1 (special chars like \n doesn't
+          count in) arrives does OperationTool stop reading.
+      (c) All line(s) are gathered together and are treated as ONE record.
+      (d) Each line shall be composed of a <key, value> pair, or pairs. In case
+          of pairs, use a comma (","), or a semicolon (";") to separate them,
+          and comma and semicolon can co-exist in one line.
+      (e) Comma and semicolon are used here as separators, so if they appear
+          in either key or value, please use quotation mark.
+      (f) In a <key, value> pair with the format of <key>=<value>, pay
+          attention to whitespaces. They will be treated as part of <key> if
+          it's on LHS (left hand side), or part of <value> on RHS. One can turn
+          to help of SelectionTool for examples.
+          A <key, value> pair can also follow the JSON format: <value>:<key>.
+          In this case whitespaces are less sensitive.
+          The two formats co-exist in the same line.
+      (g) It is not suggested to use backslashes ("\") to continue a line. Just
+          a new line can do.
+
+Working Modes of OperationTool:
+  MODE:           INSERTING MODE
+  Function:       insert the record(s) retrieved from
+  Way to enable:  (default mode) specifying nothing or "--mode=1", "-M1"
+  On input:       <key, value> pairs are treated as aspects of a record. If
+                  some unnecessary aspects are omitted, they use their default,
+                  if OperationTool fails to take necessary aspects of a record,
+                  this insertion fails.
+  Result:         Record(s) with new LFN are inserted into database. If there
+                  is a record with the same LFN as that to be inserted, this
+                  insertion fails.
+  COMMENTS:       (a) Designed for new records. If a record needs updating, use
+                      UPDATING MODE; if it is obsolete, use DELETING MODE.
+                  (b) All necessary aspects of a record must be specified, LFN
+                      included (see Notes for "necessary aspects").
+                  (c) It is suggested not to omit any aspects of a record
+
+  MODE:           UPDATING MODE
+  Function:       update a record with the LFN using values from input
+  Way to enable:  specifying "--update-mode" or "--mode=2", "-M2"
+  On input:       <key, value> pairs from input are treated as the new value of
+                  that key, while LFN is used to identify a record to be
+                  updated.
+  Result:         Aspects of the record with that LFN are updated with values
+                  from input, but OperationTool does nothing if an input LFN
+                  doesn't exist
+  COMMENTS:       (a) Designed for existing records
+                  (b) LFN must be specified
+                  (c) Omitted aspects of a matching record survive
+                  (d) If <value> of a <key> in the database is the same as the
+                      one being updated, it is updated with the same <value>.
+                      So if a <value> doesn't need updating, it doesn't have to
+                      be specified in the input (in case of JSON files, leave
+                      it be. It is then unnecessary to erase the repeated
+                      values).
+
+  MODE:           DELETING MODE
+  Function:       delete all records with the same values on all aspects given
+  Way to enable:  specifying "--delete-mode" or "--mode=3", "-M3"
+  On input:       each pair of <key, value> is a condition governing the
+                  record(s) to be deleted: only record(s) with <key>=<value>
+                  will be deleted. Multiple conditions if any are joined by
+                  logical AND
+  Result:         Matching records are deleted from database. Nothing done if
+                  no those records.
+  COMMENTS:       (a) Designed for existing records
+                  (b) No aspects must be specified.
+                  (c) If only one <key, value> is given (e.g. --lfn="LFN.root"),
+                      all records with <key>=<value> will be deleted (a record
+                      whose LFN is "LFN.root" is deleted if any).
+                      If multi pairs are given (e.g. --version=5.4.2 --SvnRev=
+                      6047), records to be deleted must have the excat value on
+                      all keys given (only records with version 5.4.2 AND
+                      SvnRev 6047 will be deleted)
+                  (d) It is more likely not to use JSON files to inform
+                      OperationTool of aspect(s) of a record.
+
+Notes:
+ 1) In this manual, "record" is the set of all properties of a ROOT file. It
+    may refer to either all expected aspects or all aspects given according to
+    the context. For example, each line in JSON files is a record, where one
+    can find all properties of a ROOT file; all aspects from options also
+    defines a record, but only given aspects can be expected while the missing
+    one will be treated as default by OperationTool.
+    "aspect" is a <key, value> pair of a ROOT file showing a certain property
+    of it. For example, --lfn="LFN.root" can be converted to <lfn, "LFN.ROOT">,
+    which means the LFN of this record (this ROOT file) is "LFN.ROOT".
+
+ 2) OperationTool shares the same way to use configuration files as
+    SelectionTool does:
+    * 6 extractable options
+    * attention on whitespace
+    * the same format
+    * missing options accepted (specified instead by terminal arguments directly)
+    * path to locate it
+    (Details omitted; see help message for SelectionTool if necessary)
+
+ 3) Necessary aspects are properties of a ROOT file that either can't be
+    extracted from existing ones or must be given for a record. Different types
+    of ROOT files have slight different necessary aspects:
+      2A DATA:
+        lfn, last_modified, size, type, SvnRev, version, nevts
+      MC_SIMU & MC_RECO:
+        lfn, last_modified, size, type, SvnRev, version, nevts
+    Note there is an unnecessary aspect that is used only by inside of
+    OperationTool: remote. This property is used as a flag showing whether it
+    is a remote path. It is automatically parsed from LFN and don't need to be
+    explicited specified, and the value directly from input if any shadows the
+    automatically parsed version.
+
+ 4) Type of record(s) is passed from input (configuration, or terminal option),
+    and it can also be extracted from the LFN of a record. Another thing: for
+    records in a JSON file, they usually belong to the same type: 2A JSON files,
+    MC SIMU files, or MC RECO files. As a result, it is assumed that the type
+    from input and that from LFN match. If there is a conflict, OperationTool's
+    behavior is controls by option "multi-tables":
+      without this options (default):
+        A warning will display and this record is skipped
+      with this option:
+        A warning will display and the type is changed accordingly
+    This option is disabled as default, because enabling so calls for the need
+    to dynamically change the types, which take some additional time. So it is
+    suggested that one be gentle to OperationTool by telling it the real type
+    of record(s) instead of a lie.
+
+Examples:
+  In the examples below, "privileged.ini" rather than the default "default.ini"
+  is used as the configration file, because the default configration used by
+  SelectionTool relies on an account without enough permissions. This file is
+  not provided automatically and should thus be created manually by privileged
+  users where one can find the format of that file in the manual for
+  SelectionTool since they two are both configration files and share the same
+  format. Also, some examples are so long that a line can't hold, so a "\" at
+  the end of a command to show that the next line is actually part of the
+  command though it restarts a new line.
+
+  ./OperationTool -h
+         Print help and exit
+
+  ./OperationTool -o privileged.ini -j JSON_FILE.json
+         Insert all records in JSON_FILE.json according to the settings of
+         privileged.ini
+
+  ./OperationTool -o privileged.ini -j JSON_FILE.json -u new_user -T data_2a_tbl
+         Insert all records in JSON_FILE.json as "data_2a_tbl" (type)
+         according to the settings of privileged.ini but as the user of "new_user"
+
+  ./OperationTool -o privileged.ini -f SAMPLE_LFN.root -n 1000 -e 200000000.09 \
+                  -b 100000000.001 -v 6047 -V 5.4.2 -s 2000000000 \
+                  -l "2017-06-26_00:00:00" -C aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+         Insert a ROOT file named SAMPLE_LFN.root (lfn). It has 1000 (nevts)
+         events covering a time range of 100000000.001 (tstart) - 200000000.09
+         (tstop). It is produced by DMPSW whose revision is 6047 (SvnRev), and
+         its tag is 5.4.2 (version). This file's size is 2000000000B (size),
+         and it is latest modified on 2017-06-26_00:00:00 (last-modified). Its
+         checksum is aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa (checksum).
+
+  ./OperationTool -o privileged.ini -f AN_EXISTING_FILE.root -n 1000 \
+                  -e 222222222.09 -b 111111111.003 -v 6047 -V 5.4.2 \
+                  -s 2000000000 -l "2017-06-26_00:00:00" \
+                  -C aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa --update-mode
+         Update a record whose lfn = AN_EXISTING_FILE.root by letting its nevts
+         be 1000, tstop be 222222222.09, tstart be 111111111.001, SvnRev be
+         6047, version be be 5.4.2, size be 2000000000, last-modified be
+         2017-06-26_00:00:00, and checksum be aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+         It would fail without specifying "--update-mode", for the default
+         INSERTION MODE rejects the re-insertion of an existing record (if
+         there is a record with exactly the same lfn as the one being inserted,
+         then this record being inserted is marked as an existing record).
+
+  ./OperationTool -o privileged.ini -f A_NOT_IN_DATABASE_FILE.root \
+                  -b 111111111.003 -v 6047 -V 5.4.2 -s 2000000000 \
+                  -l "2017-06-26_00:00:00" --update-mode
+         Update a record whose lfn = A_NOT_IN_DATABASE_FILE.root by letting its
+         tstart be 111111111.003, SvnRev be 6047, version be 5.4.2, size be
+         2000000000, and last-modified be 2017-06-26_00:00:00
+         This call actually does nothing, for no records meet the condition. In
+         case of "--delete-mode", also nothing will be done.
+
+  ./OperationTool -o privileged.ini -f AN_EXISTING_FILE.root -n 1000 -e 200000000.09 \
+                  -b 100000000.003 -v 6047 -V 5.4.2 -s 2000000000 \
+                  -l "2017-06-26_00:00:00" --delete-mode \
+                  -C aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+         Delete a record if its lfn = AN_EXISTING_FILE.root, and nevts = 1000,
+         and tstop = 200000000.09, and tstart = 100000000.001, and SvnRev =
+         6047, and version = 5.4.2, and size = 2000000000, and last-modified =
+         2017-06-26_00:00:00, and checksum = aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+
+  ./OperationTool -o privileged.ini -d
+"comment": "NONE"$
+good=1$
+emax=-1.0;lfn=SAMPLE_LFN.root,last_modified=2017-06-26_00:00:00$
+"tstop": "200000000.09", "size": "2000000000"$
+"task": "None", "type": "2A", "emin": -1.0$
+"checksum": "bef17af44cb42c0d49f653e73dd2ad33", "SvnRev": "6047"$
+"version": "5.4.2", "tstart": 100000000.913, "nevts": 100000, "error_code": 0$
+$
+         Insert a record "SAMPLE_LFN.root" (lfn) where nevts = 1000, tstop =
+         200000000.09, tstart = 100000000.001, SvnRev = 6047, version = 5.4.2,
+         size = 2000000000, last-modified = 2017-06-26_00:00:00, and checksum =
+         aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+         (Hints: "$" here means the end of a line, or can be taken as "\n",
+         <Enter>. It doesn't appear in real terminal arguments. There could
+         also be a "^" in the begining of a line, but it seems unnecessary.
+         Also, it is not suggested to use backslashes to continue because it is
+         not tested, yet.)
+
+Exit status:
+ 0  if OK,
+ 1  if minor problems (e.g., cannot access subdirectory),
+ 2  if serious trouble (e.g., cannot access command-line argument).
+
+Report SelectionTool bugs to wangyp@pmo.ac.cn
