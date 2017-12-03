@@ -1,0 +1,24 @@
+On "OnDefaultPassword"
+
+Variable |string BaseParse::default_password| was treated in other way than its original design. This commit tries to correct it.
+
+Password is one of the most important parameters for a connection, so it deserves our attention on how to acquire it. Initially, I created a variable "default_password" and used it as the default  password if no option for password is given. It itself contained only trivial messages. So if all options were parsed but the password was found its default (the same as default_password), no password had been given and a method for interactively taking password was invoked. At that time, only a "default_password". No "default_account". And the code was also scripted this way.
+
+On Oct. and Nov., I forgot this original design: having found that there was only not a "default_account" for "default_password" that the connection could not be established, I added a "default_account" hoping to use this pair of parameters to connect the database if either was omitted in the terminal arguments. Recently, this misunderstanding was finally discovered and this new branch emerges.
+
+Change log for this branch from "master":
+1. common_tool.h
+  1) Added a namespace "Account" which contains two const strings, default_account & default_password. All default accounts and passwords in the code are replaced with these two variables.
+  2) Rename two member of "BaseParser" "default_account" & "default_password" by "trivial_account" & "trivial_password", so that one may not be confused by the dismatch of their name and their usage.
+  3) Added to "BaseParser" a new protected virtual method:
+         virtual bool OnDefaultPassword() const { return true; }
+     This method is invoken by GetGeneralParameter to see if the default account is accepted. SelectionTool accepts a default account, while OperationTool rejects it for privilege concerns. Since it's quite easy, a body is provided but it is still open to be overwritten (as a virtual method).
+
+2. common_tool.cc
+  1) Initiating list of "BaseParser" is modified for the two const members, "trivial_account" & "trivial_password".
+  2) In GetGeneralParameter, a check for OnDefaultPassword is committed. For SelectionTool, this check never fails, for OperationTool, however, a default account from namespace "Account" flunks it.
+
+3. operation_tool.h
+  1) Added a new method:
+         bool OnDefaultPassword() const;
+     If the account is the default one, it returns false, true otherwise.

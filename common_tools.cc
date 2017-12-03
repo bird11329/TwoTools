@@ -445,7 +445,13 @@ BaseParser::ColumnAcquirer::ColumnAcquirer()
 bool BaseParser::ColumnAcquirer::Acquire(const string& server, const string& database, int port, const string& table)
 {
   // Uses default account to log in
-  if(!connectMySQL(server.c_str(), "anonymous", "testing",  database.c_str(), port))
+  if(!connectMySQL(server.c_str(),
+                   Account::default_account.c_str(),
+                   Account::default_password.c_str(),
+                   database.c_str(),
+                   port
+                  )
+    )
   {
     cerr << "Error connecting while getting columns..." << endl;
     return false;
@@ -602,8 +608,8 @@ bool BaseParser::ColumnAcquirer::Deliver(vector<string>& o_names, vector<int>& o
 // Base class of SelectionTool and OperationTool
 // Constructor
 BaseParser::BaseParser():
-  default_account("anonymous"),	// Default account
-  default_password("testing")	// Default password
+  trivial_account("trivial_account"),	// Trivial account
+  trivial_password("to be replaced")	// Trivial password
 {
   port = 3306;
   number_of_columns = 0;
@@ -632,8 +638,8 @@ void BaseParser::GeneralAssembler(boost::program_options::options_description& o
   // Add common options
   opts.add_options()
     ("server,S", value<string>(), "Server of database")
-    ("user,U", value<string>()->default_value(default_account), "User account")
-    ("passwd,W", value<string>()->default_value(default_password), "Password for that user to login")
+    ("user,U", value<string>()->default_value(trivial_account), "User account")
+    ("passwd,W", value<string>()->default_value(trivial_password), "Password for that user to login")
     ("database,D", value<string>(), "Name of Database")
     ("port,P", value<int>()->default_value(3306), "Port of connection")
     ("options,o", value<string>(), "Options for the query")
@@ -666,17 +672,36 @@ void BaseParser::GetGeneralParameters(const boost::program_options::variables_ma
     if(v_map.count(general_parameter_names[2]))
     {
       string password(v_map[general_parameter_names[2]].as<string>());
-      if(default_password != password)
+      if(trivial_password != password)
         general_parameters[2].assign(password);
     }
-    // But default password is trivial and should be acquired
-    if(default_password == general_parameters[2])
-      InteractivePassword();
+    // For account & password. First, the account
+    if(Account::default_account == general_parameters[1])
+    {
+      // If default_account is used, make sure the password also matches 
+      // No reverse matching from password to account is committed here.
+      if(Account::default_password != general_parameters[2])
+        general_parameters[2].assign(Account::default_password);
+    }
+    else
+    {
+      // In case of non-default account. If no input for password, it is still
+      // the default one, but default password is trivial and should thus be
+      // acquired interactively
+      if(trivial_password == general_parameters[2])
+        InteractivePassword();
+    }
 
     if(v_map.count("port"))
       port = v_map["port"].as<int>();
   } catch(exception& e) {
     throw runtime_error(e.what());
+  }
+
+  if(!OnDefaultAccounts())
+  {
+    // The default account doesn't make it (rejected by OperationTool)
+    throw runtime_error("Default account rejected");
   }
 
   // Check if all general parameters are ready.
@@ -704,7 +729,7 @@ void BaseParser::InteractivePassword()
   cout.flush();
   string password;
   cin >> password;
-  if(!password.empty() && default_password != password)
+  if(!password.empty() && trivial_password != password)
     general_parameters[2].assign(password);
   else
     general_parameters[2].clear();

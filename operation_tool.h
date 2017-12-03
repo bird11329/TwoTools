@@ -59,6 +59,10 @@ private:
   bool IngestDirectInput();
   static const std::string separators[6];
   void InsertMap(const std::string& content, std::map<std::string, std::string>& target) const;
+  bool OnDefaultAccounts() const
+  {
+    return Account::default_account != general_parameters[1];
+  }
 };
 
 // Operations manager, relying on MySQLOperator to Insert/delete/update

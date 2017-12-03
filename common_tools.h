@@ -18,6 +18,16 @@ public:
   bool Authenticating(const std::string& real_key) const;
 };
 
+namespace Account {
+  // Default account for database
+  const std::string default_account = "anonymous";
+  // Password for default account
+  const std::string default_password = "testing";
+}
+
+
+
+
 #include <mysql/mysql.h>
 // MySQL interface. Designed to be inherited.
 class MySQLInterface {
@@ -47,8 +57,8 @@ protected:
 
   // Connecting database
   bool connectMySQL(const char* server,
-                    const char* username = "anonymous",
-                    const char* passwd = "testing",
+                    const char* username = Account::default_account.c_str(),
+                    const char* passwd = Account::default_password.c_str(),
                     const char* database = "DAMPE_GENEVA",
                     int port = 3306);
 
@@ -232,8 +242,8 @@ protected:
   // 9. Printing level of columns
   std::vector<int> level_of_columns;
 
-  const std::string default_account;
-  const std::string default_password;
+  const std::string trivial_account;
+  const std::string trivial_password;
   // Constructor
   BaseParser();
   // Destructor
@@ -253,6 +263,9 @@ protected:
   // Components for general parameters parser (1-7)
   // Called before the real query and after the parsing of terminals
   void GetGeneralParameters(const boost::program_options::variables_map& v_map, int level = -1) throw(std::runtime_error);
+  // On default account. Two tools take it differently: SelectionTool accepts
+  // it, while OperationTool rejects it. 
+  virtual bool OnDefaultAccounts() const { return true; }
 
   // Reserve repulsive options for future check
   void ReserveRepulsiveOptions(const char* option1, const char* option2) const
