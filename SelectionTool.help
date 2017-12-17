@@ -14,8 +14,9 @@ first group of arguments take care of connection:
   -T, --type=TYPE               Type of records concerned
   -o, --options=OPTION_FILE_NAME
                                 Name of configuration file for the query
-Note if -S, -U, -W, -D, -P, -T overwrites the corresponding item(s) in the
-configuration file. See Notes below for more details.
+Note any option(s) in -S, -U, -W, -D, -P, -T overwrites the corresponding
+item(s) in the configuration file specified by option -o,--option. See Notes
+below for more details.
 
 Options in the second group control the behavior of SelectionTool. If one of
 the first two options is given, SelectionTool displays its help messege and
@@ -168,8 +169,23 @@ Notes:
     If the number of "-" is even, SelectionTool refuses to take it.
 
  7) Option "-f, --filename=<FileHints>" can ingest multiple parameters, it can
-    also ingest "*"s for matching.
-    Option "-l, --last-modified=<LAST-MODIFIED>" takes a range for date-time.
+    also ingest "*"s for matching. This option can be given many times, and it
+    can also take several arguments on each instance, so any of the three
+    versions below is accepted:
+      -f filename1 filename2 filename3
+      -f filename1 --other-options -f filename2 --other-options -f filename3
+      -f filename1 --other-options -f filename2 filename3
+    Note that a whitespace (repeated whitespaces are taken as one) is used to
+    separate different arguments (if one must have one in his/her arguments,
+    use quotes).
+    If there are more than one arguments for <filename>, they are treated
+    separately by logical OR. All other conditions than <filename> are mainly
+    joined by a logival AND (comments settings contains another instance for
+    which logical OR is used), so a record must meet all of them if it doesn't
+    get filtered, while if a record could only be thrown if it agrees with
+    none of <filename>s.
+ 
+ 8) Option "-l, --last-modified=<LAST-MODIFIED>" takes a range for date-time.
     Its edge must follow the format of YYYYmmdd[_HH[MM[SS]]], where
     +---------+----------------+--------+----------------+
     | Format  |   Meaning      | Format |    Meaning     |
